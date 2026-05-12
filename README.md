@@ -19,12 +19,11 @@ Rust project for the _Arduino Uno_.
 [`ravedude`]: https://crates.io/crates/ravedude
 
 ## License
-Licensed under either of
+Licensed under the
 
- - MIT license
+MIT license
    ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
 
-at your option.
 
 ## Contribution
 Unless you explicitly state otherwise, any contribution intentionally submitted
