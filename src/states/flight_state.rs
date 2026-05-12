@@ -3,6 +3,6 @@
 pub enum FlightState {
     Idle,
     Armed,
-    SimulatedAscent,
-    Decent
+    Ascent,
+    Descent
 }
