@@ -1,5 +1,5 @@
 #[allow(dead_code)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum FlightState {
     Idle,
     Armed,

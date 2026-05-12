@@ -17,6 +17,7 @@ const APOGEE_CONFIRMATION: u8 = 5;
 fn main() -> ! {
     let dp = arduino_hal::Peripherals::take().unwrap();
     let pins = arduino_hal::pins!(dp);
+    let mut serial = arduino_hal::default_serial!(dp, pins, 57600);
 
     let mut led = pins.d13.into_output();
     let mut imu: FakeImu = FakeImu::new();
@@ -26,6 +27,21 @@ fn main() -> ! {
 
     let mut last_altitude: f32 = 0.0;
     let mut falling_counter: u8 = 0;
+
+    fn log<S: core::fmt::Write>(
+        serial: &mut S,
+        tick: u32,
+        state: &FlightState,
+        alt: f32,
+        ax: f32,
+        ay: f32,
+        az: f32,
+    ) {
+        let _ = writeln!(serial,
+                         "{},{:?},{:.2},{:.2},{:.2},{:.2}",
+                         tick, state, alt, ax, ay, az
+        );
+    }
 
 
     loop {
