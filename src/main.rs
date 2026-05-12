@@ -23,7 +23,7 @@ fn main() -> ! {
     let mut imu: FakeImu = FakeImu::new();
 
     let mut state_tick: u32 = 0;
-    let tick: u32 = 0;
+    let mut tick: u32 = 0;
     let mut state = FlightState::Idle;
 
     let mut last_altitude: f32 = 0.0;
@@ -65,6 +65,7 @@ fn main() -> ! {
 
 
     loop {
+        tick += 1;
         state_tick += 1;
 
         let (_ax, _ay, az) = FakeImu::accel(&mut imu);
