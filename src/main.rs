@@ -12,15 +12,18 @@ fn main() -> ! {
 
     let mut led = pins.d13.into_output();
 
+    let mut state_tick: u32 = 0;
     let mut tick: u32 = 0;
     let mut state = FlightState::Idle;
 
     loop {
         tick += 1;
+        state_tick += 1;
 
-        state = match state {
+        let new_state = match state {
             FlightState::Idle => {
-                if tick > 100 {
+                if state_tick > 100 {
+                    state_tick = 0;
                     FlightState::Armed
                 } else {
                     FlightState::Idle
@@ -28,26 +31,18 @@ fn main() -> ! {
             }
 
             FlightState::Armed => {
-                if tick > 200 {
+                if state_tick > 100 {
+                    state_tick = 0;
                     FlightState::Ascent
                 } else {
                     FlightState::Armed
                 }
             }
 
-
-
             FlightState::Ascent => FlightState::Ascent,
             FlightState::Descent => FlightState::Descent,
         };
 
-        match state {
-            FlightState::Idle => led.set_low(),
-            FlightState::Armed => led.toggle(),
-            FlightState::Ascent => led.set_high(),
-            FlightState::Descent => led.set_low(),
-        }
-
-        arduino_hal::delay_ms(50);
+        state = new_state;
     }
 }
