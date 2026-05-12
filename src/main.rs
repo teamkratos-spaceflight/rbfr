@@ -6,7 +6,10 @@ mod sensors;
 
 use panic_halt as _;
 use crate::states::flight_state::FlightState;
+#[cfg(feature = "test_mode")]
 use crate::sensors::fake_imu::FakeImu;
+#[cfg(not(feature = "test_mode"))]
+use crate::sensors::real_imu::RealImu;
 use crate::sensors::imu::Imu;
 // for testing
 
@@ -20,13 +23,18 @@ fn main() -> ! {
     let mut serial = arduino_hal::default_serial!(dp, pins, 57600);
 
     let mut led = pins.d13.into_output();
-    let mut imu: FakeImu = FakeImu::new();
+    
+    #[cfg(feature = "test_mode")]
+    let mut imu = FakeImu::new();
+    #[cfg(not(feature = "test_mode"))]
+    let mut imu = RealImu::new();
 
     let mut state_tick: u32 = 0;
     let mut tick: u32 = 0;
     let mut state = FlightState::Idle;
 
     let mut last_altitude: f32 = 0.0;
+    let mut apogee_altitude: f32 = 0.0;
     let mut falling_counter: u8 = 0;
 
     fn log<S: ufmt::uWrite>(
@@ -63,14 +71,15 @@ fn main() -> ! {
         let _ = ufmt::uwrite!(serial, "\r\n");
     }
 
+    let _ = ufmt::uwrite!(&mut serial, "tick,state,alt,ax,ay,az\r\n");
 
     loop {
         tick += 1;
         state_tick += 1;
 
-        let (_ax, _ay, az) = FakeImu::accel(&mut imu);
+        let (_ax, _ay, az) = imu.accel();
         let launch_detected = az > LAUNCH_THRESHOLD;
-        let altitude = FakeImu::altitude(&mut imu);
+        let altitude = imu.altitude();
 
         let rising = altitude > last_altitude;
         log(&mut serial, tick, &state, altitude, _ax, _ay, az);
@@ -82,6 +91,10 @@ fn main() -> ! {
         }
 
         last_altitude = altitude;
+
+        if altitude > apogee_altitude && state == FlightState::Ascent {
+            apogee_altitude = altitude;
+        }
 
         if launch_detected {
             // launch detection logic could be expanded here
@@ -109,6 +122,19 @@ fn main() -> ! {
 
             FlightState::Ascent => {
                 if falling_counter > APOGEE_CONFIRMATION {
+                    let _ = ufmt::uwrite!(&mut serial, "APOGEE DETECTED AT: ");
+                    fn print_float_simple<S: ufmt::uWrite>(serial: &mut S, f: f32) {
+                        let i = f as i32;
+                        let d = ((f - i as f32) * 100.0).abs() as i32;
+                        let _ = ufmt::uwrite!(serial, "{}.", i);
+                        if d < 10 {
+                            let _ = ufmt::uwrite!(serial, "0");
+                        }
+                        let _ = ufmt::uwrite!(serial, "{}", d);
+                    }
+                    print_float_simple(&mut serial, apogee_altitude);
+                    let _ = ufmt::uwrite!(&mut serial, "\r\n");
+
                     state_tick = 0;
                     FlightState::Descent
                 } else {
@@ -118,6 +144,24 @@ fn main() -> ! {
             FlightState::Descent => FlightState::Descent,
 
         };
+
+        if new_state != state {
+            let _ = ufmt::uwrite!(&mut serial, "STATE CHANGE: ");
+            match state {
+                FlightState::Idle => { let _ = ufmt::uwrite!(&mut serial, "Idle"); },
+                FlightState::Armed => { let _ = ufmt::uwrite!(&mut serial, "Armed"); },
+                FlightState::Ascent => { let _ = ufmt::uwrite!(&mut serial, "Ascent"); },
+                FlightState::Descent => { let _ = ufmt::uwrite!(&mut serial, "Descent"); },
+            }
+            let _ = ufmt::uwrite!(&mut serial, " -> ");
+            match new_state {
+                FlightState::Idle => { let _ = ufmt::uwrite!(&mut serial, "Idle"); },
+                FlightState::Armed => { let _ = ufmt::uwrite!(&mut serial, "Armed"); },
+                FlightState::Ascent => { let _ = ufmt::uwrite!(&mut serial, "Ascent"); },
+                FlightState::Descent => { let _ = ufmt::uwrite!(&mut serial, "Descent"); },
+            }
+            let _ = ufmt::uwrite!(&mut serial, "\r\n");
+        }
 
         state = new_state;
 
