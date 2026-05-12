@@ -2,6 +2,8 @@
 #![no_main]
 
 mod states;
+pub mod sensors;
+
 use panic_halt as _;
 use crate::states::flight_state::FlightState;
 
